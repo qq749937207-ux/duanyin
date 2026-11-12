@@ -1,0 +1,23 @@
+<div id="duanyin_settings" class="duanyin-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>断因</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <p class="duanyin-desc">生成结束后，在消息旁说明为什么停了，并给出一句可执行建议。</p>
+            <label class="checkbox_label" for="duanyin_enabled">
+                <input type="checkbox" id="duanyin_enabled" />
+                <span>启用提示</span>
+            </label>
+            <div id="duanyin_contract_status" class="duanyin-contract-status"></div>
+            <div id="duanyin_passthrough_notice" class="duanyin-passthrough-notice" hidden>
+                当前的 SillyTavern 还没有打结束原因补丁，断因无法判断回复为什么结束。请按安装说明给本机 SillyTavern 打上补丁后再用，否则不会在消息旁显示结束原因。
+            </div>
+            <div class="duanyin-preview-wrap">
+                <button type="button" class="menu_button" id="duanyin_preview_btn">预览提示条</button>
+                <div id="duanyin_preview_host"></div>
+            </div>
+        </div>
+    </div>
+</div>

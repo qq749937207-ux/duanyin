@@ -1,0 +1,128 @@
+/* 断因：消息旁提示条与设置面板 */
+
+.duanyin-settings .duanyin-desc {
+    margin: 0 0 0.6em;
+    opacity: 0.85;
+    line-height: 1.45;
+}
+
+.duanyin-settings .duanyin-contract-status {
+    margin: 0.5em 0 0.75em;
+    font-size: 0.9em;
+    line-height: 1.45;
+    opacity: 0.9;
+}
+
+.duanyin-settings .duanyin-passthrough-notice {
+    margin: 0.5em 0 0.75em;
+    padding: 0.6em 0.75em;
+    border-radius: 6px;
+    border-left: 3px solid var(--SmartThemeQuoteColor, var(--SmartThemeEmColor, #8ab4f8));
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #8ab4f8) 12%, transparent);
+    color: var(--SmartThemeBodyColor, inherit);
+    font-size: 0.9em;
+    line-height: 1.5;
+    white-space: normal;
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.duanyin-settings .duanyin-preview-wrap {
+    margin: 0.4em 0 0.6em;
+}
+
+.duanyin-settings #duanyin_preview_host {
+    margin-top: 0.55em;
+}
+
+.duanyin-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+    margin: 0.45em 0 0.15em;
+    padding: 0.5em 0.7em;
+    border-radius: 6px;
+    border-left: 3px solid var(--SmartThemeQuoteColor, var(--SmartThemeEmColor, #8ab4f8));
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor, #8ab4f8) 14%, transparent);
+    color: var(--SmartThemeBodyColor, inherit);
+    font-size: 0.9em;
+    line-height: 1.45;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.duanyin-hint[data-preview="1"] {
+    border-left-style: dashed;
+    opacity: 0.95;
+}
+
+.duanyin-hint-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.duanyin-hint-title {
+    font-weight: 600;
+    margin: 0 0 0.15em;
+}
+
+.duanyin-hint-message,
+.duanyin-hint-suggestion {
+    margin: 0;
+}
+
+.duanyin-hint-suggestion {
+    margin-top: 0.25em;
+    opacity: 0.92;
+}
+
+.duanyin-hint-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+    margin-top: 0.4em;
+    align-items: center;
+}
+
+.duanyin-hint-actions .menu_button {
+    margin: 0;
+}
+
+.duanyin-hint-dismiss {
+    flex: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: 0.55;
+    cursor: pointer;
+    padding: 0 0.15em;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+.duanyin-hint-dismiss:hover,
+.duanyin-hint-dismiss:focus {
+    opacity: 1;
+}
+
+@media (max-width: 600px) {
+    .duanyin-hint {
+        font-size: 0.88em;
+        padding: 0.45em 0.55em;
+    }
+}
+
+
+/* SillyTavern's .menu_button sets width: min-content. For CJK labels
+   (no word boundaries) that shrinks the button to one character and
+   stacks the text vertically. Keep theme colors, force a horizontal label. */
+.duanyin-settings #duanyin_preview_btn,
+.duanyin-hint-actions .menu_button,
+.duanyin-hint .duanyin-continue {
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}

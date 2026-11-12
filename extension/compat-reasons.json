@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "name": "duanyin-reasons",
+  "matchIgnoreCase": true,
+  "description": "Stable stop-reason taxonomy for the 断因 SillyTavern extension. Category ids: truncated (length/max_tokens), stop, content_filter, tool_calls, thinking_quota (empty visible text after reasoning/thought tokens), plus recitation, refusal, cancelled, network, provider_error, context_length, and unknown.",
+  "rules": [
+    {
+      "id": "content_filter",
+      "match": [
+        "content_filter",
+        "SAFETY",
+        "PROHIBITED_CONTENT",
+        "BLOCKLIST",
+        "SPII",
+        "IMAGE_SAFETY",
+        "IMAGE_PROHIBITED_CONTENT",
+        "MODEL_ARMOR",
+        "content_policy_violation",
+        "HARM_CATEGORY"
+      ],
+      "show": true,
+      "severity": "warning",
+      "is_truncated": true,
+      "title_zh": "回复被内容过滤打断了",
+      "title_en": "The reply was stopped by a content filter",
+      "message_zh": "服务提供方判定这段内容触发了安全或内容策略，所以生成停了。即使在 SillyTavern 里把安全选项关掉，对方仍可能拦截。",
+      "message_en": "The provider stopped this reply because it triggered a safety or content policy. They can still block it even if SillyTavern safety settings are turned off.",
+      "suggestion_zh": "可以换个说法再试，或换一个模型/渠道。不必反复点「继续」，同样的拦截可能还会出现。",
+      "suggestion_en": "Try rephrasing, or switch models or providers. Pressing Continue may hit the same filter again.",
+      "action": ""
+    },
+    {
+      "id": "recitation",
+      "match": [
+        "RECITATION",
+        "IMAGE_RECITATION"
+      ],
+      "show": true,
+      "severity": "info",
+      "is_truncated": true,
+      "title_zh": "回复因引用限制停了",
+      "title_en": "The reply stopped because of a recitation limit",
+      "message_zh": "模型认为接下来的内容可能大段复述已有文本，所以提前结束了。",
+      "message_en": "The model stopped because the next part may have closely recapped existing text.",
+      "suggestion_zh": "可以换一种问法，或点「继续」看是否能换个角度写下去。",
+      "suggestion_en": "Try asking in a different way, or press Continue to see if it can take another angle.",
+      "action": "continue"
+    },
+    {
+      "id": "refusal",
+      "match": [
+        "refusal"
+      ],
+      "show": true,
+      "severity": "warning",
+      "is_truncated": false,
+      "title_zh": "模型拒绝了这次回复",
+      "title_en": "The model declined this reply",
+      "message_zh": "模型自己拒绝继续写下去，这和字数用完不是一回事。",
+      "message_en": "The model itself declined to continue. This is not the same as hitting a length limit.",
+      "suggestion_zh": "可以改写你的请求后再试，或换一个模型。",
+      "suggestion_en": "Try rephrasing your request, or switch to another model.",
+      "action": ""
+    },
+    {
+      "id": "context_length",
+      "match": [
+        "context_length",
+        "prompt_too_long",
+        "ContextTooLong",
+        "context_length_exceeded"
+      ],
+      "show": true,
+      "severity": "warning",
+      "is_truncated": false,
+      "title_zh": "上下文太长了",
+      "title_en": "The prompt was too long",
+      "message_zh": "发给模型的内容超出了它的上下文长度，这一轮没能正常写完。",
+      "message_en": "The prompt exceeded the model's context length, so this turn could not finish normally.",
+      "suggestion_zh": "可以减少世界书、总结更早的对话，或换一个上下文更长的模型。",
+      "suggestion_en": "Trim World Info, summarize earlier chat, or switch to a model with a longer context window.",
+      "action": ""
+    },
+    {
+      "id": "cancelled",
+      "match": [
+        "cancelled",
+        "canceled",
+        "aborted",
+        "user_abort"
+      ],
+      "show": true,
+      "severity": "info",
+      "is_truncated": true,
+      "title_zh": "生成已取消",
+      "title_en": "Generation was cancelled",
+      "message_zh": "这次回复是中途取消的，所以可能不完整。",
+      "message_en": "This reply was cancelled partway through, so it may be incomplete.",
+      "suggestion_zh": "如果需要完整回复，可以再生成一次，或在已有内容上点「继续」。",
+      "suggestion_en": "Generate again if you need a full reply, or press Continue on what is already there.",
+      "action": "continue"
+    },
+    {
+      "id": "network",
+      "match": [
+        "timeout",
+        "ECONNREFUSED",
+        "network",
+        "disconnected",
+        "ETIMEDOUT",
+        "ECONNRESET"
+      ],
+      "show": true,
+      "severity": "warning",
+      "is_truncated": true,
+      "title_zh": "连接中断了",
+      "title_en": "The connection was interrupted",
+      "message_zh": "生成过程中网络或连接出了问题，回复可能不完整。",
+      "message_en": "The connection dropped during generation, so the reply may be incomplete.",
+      "suggestion_zh": "检查网络后再试一次。如果已经有一段内容，也可以点「继续」。",
+      "suggestion_en": "Check your connection and try again. If some text already arrived, you can also press Continue.",
+      "action": "continue"
+    },
+    {
+      "id": "provider_error",
+      "match": [
+        "error",
+        "OTHER",
+        "IMAGE_OTHER",
+        "server_error",
+        "MALFORMED_RESPONSE",
+        "NO_IMAGE"
+      ],
+      "show": true,
+      "severity": "warning",
+      "is_truncated": false,
+      "title_zh": "生成遇到了上游错误",
+      "title_en": "The provider returned an error",
+      "message_zh": "模型服务在这一轮返回了错误，所以回复可能不完整或没有内容。",
+      "message_en": "The model provider returned an error, so this reply may be incomplete or empty.",
+      "suggestion_zh": "稍后再试，或换一个模型/渠道。",
+      "suggestion_en": "Try again in a moment, or switch models or providers.",
+      "action": ""
+    },
+    {
+      "id": "thinking_quota",
+      "match": [
+        "thinking_quota",
+        "empty_reasoning"
+      ],
+      "show": true,
+      "severity": "info",
+      "is_truncated": true,
+      "title_zh": "思考占用了生成额度",
+      "title_en": "Thinking used up the output budget",
+      "message_zh": "这一轮很多字数花在了模型的思考过程上，所以你看到的回复很短，或者几乎是空的。思考内容也会计入长度上限。",
+      "message_en": "A large share of this turn's token budget went to the model's thinking, so the visible reply is short or almost empty. Thinking tokens count toward the length limit too.",
+      "suggestion_zh": "可以调高回复长度上限后再点「继续」，或换一个不带思考的模型。",
+      "suggestion_en": "Raise the max token limit and press Continue, or switch to a non-thinking model.",
+      "action": "continue"
+    },
+    {
+      "id": "truncated",
+      "match": [
+        "length",
+        "max_tokens",
+        "MAX_TOKENS",
+        "CONTINUATION"
+      ],
+      "show": true,
+      "severity": "info",
+      "is_truncated": true,
+      "title_zh": "回复被截断了",
+      "title_en": "The reply was cut off",
+      "message_zh": "达到了本次生成的长度上限。",
+      "message_en": "This reply hit the maximum length set for this generation.",
+      "suggestion_zh": "可以试着调高 max tokens，或点「继续」接着写。",
+      "suggestion_en": "Try raising max tokens, or press Continue to keep writing.",
+      "action": "continue"
+    },
+    {
+      "id": "tool_calls",
+      "match": [
+        "tool_calls",
+        "function_call",
+        "tool_use",
+        "MALFORMED_FUNCTION_CALL",
+        "UNEXPECTED_TOOL_CALL",
+        "TOO_MANY_TOOL_CALLS"
+      ],
+      "show": false,
+      "severity": "info",
+      "is_truncated": false,
+      "title_zh": "模型发起了工具调用",
+      "title_en": "The model made a tool call",
+      "message_zh": "这一轮停在工具调用上，通常会由 SillyTavern 继续处理，不必当作截断。",
+      "message_en": "This turn stopped for a tool call. SillyTavern usually handles that next, so it is not a truncation.",
+      "suggestion_zh": "无需特别处理。如果没有看到后续回复，再检查工具调用设置。",
+      "suggestion_en": "Usually nothing to do. If no follow-up reply appears, check your tool-calling settings.",
+      "action": ""
+    },
+    {
+      "id": "stop",
+      "match": [
+        "stop",
+        "STOP",
+        "end_turn",
+        "stop_sequence",
+        "natural"
+      ],
+      "show": false,
+      "severity": "info",
+      "is_truncated": false,
+      "title_zh": "模型正常结束",
+      "title_en": "The model finished normally",
+      "message_zh": "这一轮已经正常写完了。",
+      "message_en": "This turn finished normally.",
+      "suggestion_zh": "无需特别处理。",
+      "suggestion_en": "No action needed.",
+      "action": ""
+    }
+  ],
+  "fallback": {
+    "id": "unknown",
+    "match": [
+      "unknown",
+      "missing",
+      "FINISH_REASON_UNSPECIFIED"
+    ],
+    "show": true,
+    "severity": "info",
+    "is_truncated": false,
+    "title_zh": "回复可能提前结束了",
+    "title_en": "The reply may have ended early",
+    "message_zh": "没能读到明确的结束原因，所以无法判断是写完了、被截断，还是被过滤。",
+    "message_en": "No clear stop reason was available, so it is unclear whether the reply finished, was cut off, or was filtered.",
+    "suggestion_zh": "如果句子看起来没写完，可以点「继续」，或调高长度上限后再试。",
+    "suggestion_en": "If the sentence looks unfinished, press Continue, or raise the length limit and try again.",
+    "action": "continue"
+  }
+}

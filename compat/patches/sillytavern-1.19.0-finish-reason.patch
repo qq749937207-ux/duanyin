@@ -1,0 +1,287 @@
+From: 断因·接口与兼容
+Subject: [PATCH] Expose Chat Completion finish_reason on message.extra
+SillyTavern-Version: 1.19.0
+SillyTavern-Tag: 1.19.0 (7e8663cd9c184a550b37238218bdd32c6efc68e9)
+SillyTavern-Release-HEAD: 06bde939fb1e9c4c8d8641d810f0a916b5bce127
+Applies-to: tag 1.19.0 and release branch (source files identical for these paths)
+
+diff --git a/public/script.js b/public/script.js
+index 777a2d5..d0139bd 100644
+--- a/public/script.js
++++ b/public/script.js
+@@ -102,6 +102,8 @@ import {
+     setupChatCompletionPromptManager,
+     prepareOpenAIMessages,
+     sendOpenAIRequest,
++    extractFinishState,
++    applyFinishStateToExtra,
+     loadOpenAISettings,
+     oai_settings,
+     openai_messages_count,
+@@ -3753,6 +3755,15 @@ class StreamingProcessor {
+      * @param {boolean} options.unlockUI - Whether to unlock the generation UI.
+      */
+     async finalizeIntermediaryMessage(messageId, text, { unlockUI = true }) {
++        const earlyMessage = chat[messageId];
++        if (earlyMessage) {
++            earlyMessage.extra = earlyMessage.extra || {};
++            const aborted = !!(this.abortController?.signal?.aborted);
++            if (aborted && !this.finishState?.finish_reason) {
++                this.finishState = Object.assign({}, this.finishState, { finish_reason: 'cancelled' });
++            }
++            applyFinishStateToExtra(earlyMessage.extra, this.finishState);
++        }
+         await this.onProgressStreaming(messageId, text, true);
+         const messageElement = chatElement.find(`.mes[mesid="${messageId}"]`);
+         const message = chat[messageId];
+@@ -3821,6 +3832,15 @@ class StreamingProcessor {
+         this.abortController.abort();
+         this.isStopped = true;
+ 
++        const errMessage = (this.messageId >= 0) ? chat[this.messageId] : null;
++        if (errMessage) {
++            errMessage.extra = errMessage.extra || {};
++            if (!errMessage.extra.finish_reason && !this.finishState?.finish_reason) {
++                this.finishState = Object.assign({}, this.finishState, { finish_reason: 'cancelled' });
++            }
++            applyFinishStateToExtra(errMessage.extra, this.finishState);
++        }
++
+         this.markUIGenStopped();
+ 
+         const noEmitTypes = ['swipe', 'impersonate', 'continue'];
+@@ -3892,6 +3912,7 @@ class StreamingProcessor {
+                 this.reasoningHandler.updateReasoning(this.messageId, state?.reasoning);
+                 this.images = state?.images ?? [];
+                 this.reasoningSignature = state?.signature ?? null;
++                this.finishState = state ? extractFinishState(state, this.finishState || {}) : this.finishState;
+                 await eventSource.emit(event_types.STREAM_TOKEN_RECEIVED, text);
+                 await sw.tick(async () => await this.onProgressStreaming(this.messageId, this.continueMessage + text));
+             }
+@@ -5488,6 +5509,7 @@ export async function Generate(type, { automatic_trigger, force_name2, quiet_pro
+         let reasoning = extractReasoningFromData(data);
+         let imageUrls = extractImagesFromData(data);
+         const reasoningSignature = extractReasoningSignatureFromData(data);
++        const finishState = extractFinishState(data);
+         kobold_horde_model = title;
+ 
+         const swipes = extractMultiSwipes(data, type);
+@@ -5529,9 +5551,9 @@ export async function Generate(type, { automatic_trigger, force_name2, quiet_pro
+         } else {
+             // Without streaming we'll be having a full message on continuation. Treat it as a last chunk.
+             if (originalType !== 'continue') {
+-                ({ type, getMessage } = await saveReply({ type, getMessage, title, swipes, reasoning, imageUrls, reasoningSignature }));
++                ({ type, getMessage } = await saveReply({ type, getMessage, title, swipes, reasoning, imageUrls, reasoningSignature, finishState }));
+             } else {
+-                ({ type, getMessage } = await saveReply({ type: 'appendFinal', getMessage, title, swipes, reasoning, imageUrls, reasoningSignature }));
++                ({ type, getMessage } = await saveReply({ type: 'appendFinal', getMessage, title, swipes, reasoning, imageUrls, reasoningSignature, finishState }));
+             }
+ 
+             // This relies on `saveReply` having been called to add the message to the chat, so it must be last.
+@@ -6639,7 +6661,7 @@ async function processImageAttachment(message, { imageUrls }) {
+  * @property {string} type Type of generation
+  * @property {string} getMessage Generated message
+  */
+-export async function saveReply({ type, getMessage, fromStreaming = false, title = '', swipes = [], reasoning = '', imageUrls = [], reasoningSignature = null }) {
++export async function saveReply({ type, getMessage, fromStreaming = false, title = '', swipes = [], reasoning = '', imageUrls = [], reasoningSignature = null, finishState = null }) {
+     // Backward compatibility
+     if (arguments.length > 1 && typeof arguments[0] !== 'object') {
+         console.trace('saveReply called with positional arguments. Please use an object instead.');
+@@ -6687,6 +6709,7 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
+                 const tokenCountText = (reasoning || '') + lastMessage.mes;
+                 lastMessage.extra.token_count = await getTokenCountAsync(tokenCountText, 0);
+             }
++            applyFinishStateToExtra(lastMessage.extra, finishState);
+             const chat_id = (chat.length - 1);
+             !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
+             addOneMessage(chat[chat_id], { type: 'swipe' });
+@@ -6712,6 +6735,7 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
+             const tokenCountText = (reasoning || '') + lastMessage.mes;
+             lastMessage.extra.token_count = await getTokenCountAsync(tokenCountText, 0);
+         }
++        applyFinishStateToExtra(lastMessage.extra, finishState);
+         const chat_id = (chat.length - 1);
+         !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
+         addOneMessage(chat[chat_id], { type: 'swipe' });
+@@ -6734,6 +6758,7 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
+             const tokenCountText = (reasoning || '') + lastMessage.mes;
+             lastMessage.extra.token_count = await getTokenCountAsync(tokenCountText, 0);
+         }
++        applyFinishStateToExtra(lastMessage.extra, finishState);
+         const chat_id = (chat.length - 1);
+         !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
+         addOneMessage(chat[chat_id], { type: 'swipe' });
+@@ -6776,6 +6801,7 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
+         }
+ 
+         await processImageAttachment(newMessage, { imageUrls });
++        applyFinishStateToExtra(newMessage.extra, finishState);
+         const chat_id = (chat.length - 1);
+ 
+         !fromStreaming && await eventSource.emit(event_types.MESSAGE_RECEIVED, chat_id, type);
+@@ -6784,6 +6810,10 @@ export async function saveReply({ type, getMessage, fromStreaming = false, title
+     }
+ 
+     const item = chat[chat.length - 1];
++    if (item && finishState) {
++        item.extra = item.extra || {};
++        applyFinishStateToExtra(item.extra, finishState);
++    }
+     if (item.swipe_info === undefined) {
+         item.swipe_info = [];
+     }
+diff --git a/public/scripts/openai.js b/public/scripts/openai.js
+index bab82ee..c75cf9c 100644
+--- a/public/scripts/openai.js
++++ b/public/scripts/openai.js
+@@ -91,6 +91,8 @@ export {
+     setOpenAIMessageExamples,
+     setupChatCompletionPromptManager,
+     sendOpenAIRequest,
++    extractFinishState,
++    applyFinishStateToExtra,
+     TokenHandler,
+     IdentifierNotFoundError,
+     Message,
+@@ -3165,7 +3167,7 @@ async function sendOpenAIRequest(type, messages, signal, { jsonSchema = null } =
+             let text = '';
+             const swipes = [];
+             const toolCalls = [];
+-            const state = { reasoning: '', images: [], signature: '', toolSignatures: {} };
++            const state = { reasoning: '', images: [], signature: '', toolSignatures: {}, finish_reason: null, native_finish_reason: null, block_reason: null, usage: null };
+             while (true) {
+                 const { done, value } = await reader.read();
+                 if (done) return;
+@@ -3173,6 +3175,7 @@ async function sendOpenAIRequest(type, messages, signal, { jsonSchema = null } =
+                 if (rawData === '[DONE]') return;
+                 tryParseStreamingError(response, rawData);
+                 const parsed = JSON.parse(rawData);
++                Object.assign(state, extractFinishState(parsed, state));
+ 
+                 if (canMultiSwipe && Array.isArray(parsed?.choices) && parsed?.choices?.[0]?.index > 0) {
+                     const swipeIndex = parsed.choices[0].index - 1;
+@@ -3210,6 +3213,81 @@ async function sendOpenAIRequest(type, messages, signal, { jsonSchema = null } =
+     }
+ }
+ 
++
++/**
++ * Collects provider stop / finish reason and token usage from a chat-completion-like
++ * payload (OpenAI, OpenRouter, Gemini native SSE, Claude, etc.).
++ * Later non-empty values overwrite earlier ones so the last stream chunk wins.
++ * @param {object|null|undefined} data
++ * @param {object} [prev]
++ * @returns {{ finish_reason: string|null, native_finish_reason: string|null, block_reason: string|null, usage: object|null }}
++ */
++function extractFinishState(data, prev = {}) {
++    const pickString = (...values) => {
++        for (const value of values) {
++            if (value == null) continue;
++            const text = String(value).trim();
++            if (text === '' || text === 'null' || text === 'undefined') continue;
++            return text;
++        }
++        return null;
++    };
++    const pickObject = (...values) => {
++        for (const value of values) {
++            if (value && typeof value === 'object') return value;
++        }
++        return null;
++    };
++
++    const choice = data?.choices?.[0];
++    const candidate = data?.candidates?.[0];
++
++    return {
++        finish_reason: pickString(
++            choice?.finish_reason,
++            candidate?.finishReason,
++            data?.finish_reason,
++            data?.finishReason,
++            data?.stop_reason,
++            data?.stopReason,
++            prev.finish_reason,
++        ),
++        native_finish_reason: pickString(
++            choice?.native_finish_reason,
++            candidate?.finishReason,
++            data?.stop_reason,
++            data?.stopReason,
++            data?.native_finish_reason,
++            prev.native_finish_reason,
++        ),
++        block_reason: pickString(
++            data?.promptFeedback?.blockReason,
++            data?.promptFeedback?.block_reason,
++            data?.block_reason,
++            data?.blockReason,
++            prev.block_reason,
++        ),
++        usage: pickObject(data?.usage, data?.usageMetadata, prev.usage),
++    };
++}
++
++/**
++ * Writes finish-reason fields onto a message `extra` object (in place).
++ * @param {object} extra
++ * @param {object|null|undefined} state
++ * @returns {object} extra
++ */
++function applyFinishStateToExtra(extra, state) {
++    if (!extra || typeof extra !== 'object' || !state) {
++        return extra;
++    }
++    if (state.finish_reason) extra.finish_reason = state.finish_reason;
++    if (state.native_finish_reason) extra.native_finish_reason = state.native_finish_reason;
++    if (state.block_reason) extra.block_reason = state.block_reason;
++    if (state.usage) extra.usage = state.usage;
++    return extra;
++}
++
+ /**
+  * Extracts the reply from the response data from a chat completions-like source
+  * @param {object} data Response data from the chat completions-like source
+diff --git a/src/endpoints/backends/chat-completions.js b/src/endpoints/backends/chat-completions.js
+index 0d98c77..df79d34 100644
+--- a/src/endpoints/backends/chat-completions.js
++++ b/src/endpoints/backends/chat-completions.js
+@@ -435,7 +435,15 @@ async function sendClaudeRequest(request, response) {
+             console.debug('Claude response:', generateResponseJson);
+ 
+             // Wrap it back to OAI format + save the original content
+-            const reply = { choices: [{ 'message': { 'content': responseText } }], content: generateResponseJson.content };
++            const reply = {
++                choices: [{
++                    message: { content: responseText },
++                    finish_reason: generateResponseJson?.stop_reason,
++                    native_finish_reason: generateResponseJson?.stop_reason,
++                }],
++                content: generateResponseJson.content,
++                usage: generateResponseJson.usage,
++            };
+             return response.send(reply);
+         }
+     } catch (error) {
+@@ -780,8 +788,19 @@ async function sendMakerSuiteRequest(request, response) {
+                 return response.send({ error: { message } });
+             }
+ 
+-            // Wrap it back to OAI format (responseContent includes thought signatures in parts array)
+-            const reply = { choices: [{ 'message': { 'content': responseText } }], responseContent };
++            // Wrap it back to OAI format (responseContent includes thought signatures in parts array).
++            // Also pass through finishReason / usageMetadata so the client can explain early stops.
++            const finishReason = candidates[0].finishReason ?? generateResponseJson?.promptFeedback?.blockReason ?? undefined;
++            const reply = {
++                choices: [{
++                    message: { content: responseText },
++                    finish_reason: finishReason,
++                    native_finish_reason: candidates[0].finishReason ?? undefined,
++                }],
++                responseContent,
++                usageMetadata: generateResponseJson?.usageMetadata,
++                promptFeedback: generateResponseJson?.promptFeedback,
++            };
+             return response.send(reply);
+         }
+     } catch (error) {

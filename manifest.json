@@ -1,0 +1,13 @@
+{
+    "display_name": "断因",
+    "loading_order": 100,
+    "requires": [],
+    "optional": [],
+    "dependencies": [],
+    "js": "extension/index.js",
+    "css": "extension/style.css",
+    "author": "断因开发组",
+    "version": "0.1.1",
+    "auto_update": false,
+    "homePage": "https://github.com/qq749937207-ux/duanyin"
+}
